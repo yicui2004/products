@@ -1,8 +1,27 @@
 import genai
+from scraper import Xpath_from_HTML, extract_item_specifics, extract_image_url, description_Xpath, image_Xpath
+from image_describer import product_image_describer
+from io import BytesIO
+from PIL import Image
+import requests
 from scipy.spatial.distance import euclidean
 
 def gemini_embedding(input):
   return genai.embed_content(model="models/text-embedding-004", content=input)["embedding"]
+
+def comparison_data_from_url(url, model, response_parser):
+  description_content = Xpath_from_HTML(url, description_Xpath)
+  item_specifics = extract_item_specifics(description_content)
+
+  image_content = Xpath_from_HTML(url, image_Xpath)
+  image_url = extract_image_url(image_content)
+
+  img = Image.open(BytesIO(requests.get(image_url).content))
+  response = product_image_describer(img, model)
+
+  model_specifics = response_parser(response)
+
+  return item_specifics, model_specifics
 
 def match_closest_keys(dict1, dict2, embedding_function):
     key_matches = {}
